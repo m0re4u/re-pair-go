@@ -9,17 +9,22 @@ import (
 	"github.com/EngoEngine/engo/common"
 )
 
+const unitScaling = 5
+
+// MouseTracker info about mouse
 type MouseTracker struct {
 	ecs.BasicEntity
 	common.MouseComponent
 }
 
+// Unit unit defition
 type Unit struct {
 	ecs.BasicEntity
 	common.RenderComponent
 	common.SpaceComponent
 }
 
+// UnitSpawner takes care of unit spawning
 type UnitSpawner struct {
 	world *ecs.World
 
@@ -54,12 +59,10 @@ func (us *UnitSpawner) Update(dt float32) {
 		unit := Unit{BasicEntity: ecs.NewBasic()}
 
 		unit.SpaceComponent = common.SpaceComponent{
-			Position: engo.Point{us.mouseTracker.MouseComponent.MouseX - 20, us.mouseTracker.MouseComponent.MouseY - 20},
+			Position: engo.Point{X: us.mouseTracker.MouseComponent.MouseX - 20, Y: us.mouseTracker.MouseComponent.MouseY - 20},
 			Width:    8,
 			Height:   8,
 		}
-		fmt.Println(us.mouseTracker.MouseComponent.MouseX)
-		fmt.Println(us.mouseTracker.MouseComponent.MouseY)
 
 		texture, err := common.LoadedSprite("textures/unit.png")
 		if err != nil {
@@ -68,7 +71,7 @@ func (us *UnitSpawner) Update(dt float32) {
 
 		unit.RenderComponent = common.RenderComponent{
 			Drawable: texture,
-			Scale:    engo.Point{5, 5},
+			Scale:    engo.Point{X: unitScaling, Y: unitScaling},
 		}
 
 		for _, system := range us.world.Systems() {
