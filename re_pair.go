@@ -37,9 +37,13 @@ func (*DefaultScene) Setup(u engo.Updater) {
 	world.AddSystem(&common.RenderSystem{})
 	world.AddSystem(&common.MouseSystem{})
 
-	world.AddSystem(&systems.UnitSpawner{})
+	us := &systems.UnitSpawner{}
+	world.AddSystem(us)
 	world.AddSystem(&systems.MouseFollower{})
 
+	us.SpawnUnitAtLocation(200, 200)
+	us.SpawnUnitAtLocation(300, 200)
+	us.SpawnUnitAtLocation(400, 200)
 }
 
 func main() {

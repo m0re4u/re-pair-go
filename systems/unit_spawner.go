@@ -50,6 +50,34 @@ func (us *UnitSpawner) New(w *ecs.World) {
 	}
 }
 
+// SpawnUnitAtLocation spawn new unit at the given location
+func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
+	texture, err := common.LoadedSprite("textures/unit.png")
+	if err != nil {
+		log.Println("Unable to load texture: " + err.Error())
+	}
+
+	unit := Unit{
+		BasicEntity: ecs.NewBasic(),
+		RenderComponent: common.RenderComponent{
+			Drawable: texture,
+			Scale:    engo.Point{X: unitScaling, Y: unitScaling},
+		},
+		SpaceComponent: common.SpaceComponent{
+			Position: engo.Point{X: x, Y: y},
+			Width:    texture.Width(),
+			Height:   texture.Height(),
+		},
+	}
+	for _, system := range us.world.Systems() {
+		switch sys := system.(type) {
+		case *common.RenderSystem:
+			sys.Add(&unit.BasicEntity, &unit.RenderComponent, &unit.SpaceComponent)
+		}
+	}
+
+}
+
 // Update is ran every frame, with `dt` being the time
 // in seconds since the last frame
 func (us *UnitSpawner) Update(dt float32) {
