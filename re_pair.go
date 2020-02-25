@@ -2,7 +2,6 @@ package main
 
 import (
 	"image/color"
-	"log"
 
 	"github.com/EngoEngine/ecs"
 	"github.com/EngoEngine/engo"
@@ -41,33 +40,6 @@ func (*DefaultScene) Setup(u engo.Updater) {
 	world.AddSystem(&systems.UnitSpawner{})
 	world.AddSystem(&systems.MouseFollower{})
 
-	// Create an player entity
-	player := systems.Player{BasicEntity: ecs.NewBasic()}
-
-	texture, err := common.LoadedSprite("textures/cursor.png")
-	if err != nil {
-		log.Println(err)
-	}
-	// Initialize the components, set scale to 8x
-	player.RenderComponent = common.RenderComponent{
-		Drawable: texture,
-		Scale:    engo.Point{X: 4, Y: 4},
-	}
-	player.SpaceComponent = common.SpaceComponent{
-		Position: engo.Point{X: 0, Y: 0},
-		Width:    texture.Width() * player.RenderComponent.Scale.X,
-		Height:   texture.Height() * player.RenderComponent.Scale.Y,
-	}
-
-	// Add it to appropriate systems
-	for _, system := range world.Systems() {
-		switch sys := system.(type) {
-		case *common.RenderSystem:
-			sys.Add(&player.BasicEntity, &player.RenderComponent, &player.SpaceComponent)
-		case *systems.MouseFollower:
-			sys.Add(&player.BasicEntity, &player.RenderComponent, &player.SpaceComponent)
-		}
-	}
 }
 
 func main() {
