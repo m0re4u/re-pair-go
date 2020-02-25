@@ -6,26 +6,31 @@ import (
 	"github.com/EngoEngine/engo/common"
 )
 
+// Player entity
 type Player struct {
 	ecs.BasicEntity
 	common.RenderComponent
 	common.SpaceComponent
 }
 
+// followEntity mouse follower
 type followEntity struct {
 	*ecs.BasicEntity
 	*common.RenderComponent
 	*common.SpaceComponent
 }
 
+// MouseFollower things that follow the mouse
 type MouseFollower struct {
 	entities []followEntity
 }
 
+// Add a follower to the mouse
 func (s *MouseFollower) Add(basic *ecs.BasicEntity, render *common.RenderComponent, space *common.SpaceComponent) {
 	s.entities = append(s.entities, followEntity{basic, render, space})
 }
 
+// Remove a follower from the mouse
 func (s *MouseFollower) Remove(basic ecs.BasicEntity) {
 	delete := -1
 	for index, e := range s.entities {
@@ -40,6 +45,7 @@ func (s *MouseFollower) Remove(basic ecs.BasicEntity) {
 	}
 }
 
+// Update a mouse follower's position
 func (s *MouseFollower) Update(dt float32) {
 	for _, e := range s.entities {
 		e.SpaceComponent.Position.X = engo.Input.Mouse.X
