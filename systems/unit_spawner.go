@@ -59,9 +59,18 @@ func (us *UnitSpawner) NewUnit(posx float32, posy float32) Unit {
 }
 
 // SpawnUnitAtLocation spawn new unit at the given location
-func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) Unit {
+func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
 	unit := us.NewUnit(x, y)
-	return unit
+	for _, system := range us.world.Systems() {
+		switch sys := system.(type) {
+		case *common.RenderSystem:
+			sys.Add(&unit.BasicEntity, &unit.RenderComponent, &unit.SpaceComponent)
+		case *common.MouseSystem:
+			sys.Add(&unit.BasicEntity, &unit.MouseComponent, &unit.SpaceComponent, &unit.RenderComponent)
+		case *UnitSpawner:
+			sys.Add(&unit)
+		}
+	}
 }
 
 // Update is ran every frame, with `dt` being the time
