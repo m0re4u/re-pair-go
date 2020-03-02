@@ -38,7 +38,7 @@ func (us *UnitSpawner) New(w *ecs.World) {
 }
 
 // NewUnit create a new unit entity
-func (us *UnitSpawner) NewUnit(posx float32, posy float32) Unit {
+func (us *UnitSpawner) newUnit(posx float32, posy float32) Unit {
 	texture, err := common.LoadedSprite("textures/unit.png")
 	if err != nil {
 		log.Println("Unable to load texture: " + err.Error())
@@ -54,13 +54,14 @@ func (us *UnitSpawner) NewUnit(posx float32, posy float32) Unit {
 		Height:   texture.Height() * unit.RenderComponent.Scale.Y,
 		Rotation: 0,
 	}
-	return unit
 
+	return unit
 }
 
 // SpawnUnitAtLocation spawn new unit at the given location
 func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
-	unit := us.NewUnit(x, y)
+	unit := us.newUnit(x, y)
+
 	for _, system := range us.world.Systems() {
 		switch sys := system.(type) {
 		case *common.RenderSystem:
@@ -71,15 +72,17 @@ func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
 			sys.Add(&unit)
 		}
 	}
+
 }
 
 // Update is ran every frame, with `dt` being the time
 // in seconds since the last frame
 func (us *UnitSpawner) Update(dt float32) {
 	for _, u := range us.AliveUnits {
-		fmt.Println("")
 		if u.MouseComponent.Hovered {
 			fmt.Println("HOVER on unit:", u.BasicEntity.ID())
+			u.SpaceComponent.Position.X += 10
+
 		}
 	}
 }
