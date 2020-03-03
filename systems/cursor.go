@@ -71,6 +71,39 @@ func (s *MouseFollower) New(w *ecs.World) {
 // Remove follower system from the mouse
 func (*MouseFollower) Remove(basic ecs.BasicEntity) {}
 
+func (s *MouseFollower) boxSelect(box *Box) {
+	for _, system := range s.world.Systems() {
+		switch sys := system.(type) {
+		case *UnitSpawner:
+			for _, unit := range sys.AliveUnits {
+				// Check if unit center in box
+				var widthleft, widthright, heightupper, heightbottom bool
+				if box.SpaceComponent.Width > 0 {
+					// Dragging to bottom right
+					widthleft = unit.SpaceComponent.Center().X > box.SpaceComponent.Position.X
+					widthright = unit.SpaceComponent.Center().X < box.SpaceComponent.Position.X+box.SpaceComponent.Width
+					heightupper = unit.SpaceComponent.Center().Y > box.SpaceComponent.Position.Y
+					heightbottom = unit.SpaceComponent.Center().Y < box.SpaceComponent.Position.Y+box.SpaceComponent.Height
+				} else {
+					// Draggin to top left
+					widthleft = unit.SpaceComponent.Center().X < box.SpaceComponent.Position.X
+					widthright = unit.SpaceComponent.Center().X > box.SpaceComponent.Position.X+box.SpaceComponent.Width
+					heightupper = unit.SpaceComponent.Center().Y < box.SpaceComponent.Position.Y
+					heightbottom = unit.SpaceComponent.Center().Y > box.SpaceComponent.Position.Y+box.SpaceComponent.Height
+				}
+
+				if widthleft && widthright && heightupper && heightbottom {
+					sys.SelectUnit(unit)
+				} else {
+					sys.DeselectUnit(unit)
+
+				}
+			}
+		}
+	}
+
+}
+
 // Update mouse follower's position
 func (s *MouseFollower) Update(dt float32) {
 	// Place cursor sprite at current mouse position
@@ -101,7 +134,7 @@ func (s *MouseFollower) Update(dt float32) {
 				Height:   0,
 				Position: origin,
 			}
-			s.cursor.selection.RenderComponent = common.RenderComponent{Drawable: common.Rectangle{}, Color: color.RGBA{0, 255, 0, 50}}
+			s.cursor.selection.RenderComponent = common.RenderComponent{Drawable: common.Rectangle{}, Color: color.RGBA{0, 0, 100, 50}}
 			for _, system := range s.world.Systems() {
 				switch sys := system.(type) {
 				case *common.RenderSystem:
@@ -113,6 +146,7 @@ func (s *MouseFollower) Update(dt float32) {
 			// Keep dragging -> increment selection box
 			s.cursor.selection.SpaceComponent.Width = engo.Input.Mouse.X - s.cursor.selection.Position.X
 			s.cursor.selection.SpaceComponent.Height = engo.Input.Mouse.Y - s.cursor.selection.Position.Y
+			s.boxSelect(&s.cursor.selection)
 		}
 
 	} else {
