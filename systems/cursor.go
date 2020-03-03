@@ -76,8 +76,19 @@ func (s *MouseFollower) Update(dt float32) {
 	// Place cursor sprite at current mouse position
 	s.cursor.space.Position.X = engo.Input.Mouse.X
 	s.cursor.space.Position.Y = engo.Input.Mouse.Y
+
 	if s.cursor.mouse.Clicked {
-		// On click, select entity under mouse OR if there is no entity, clear selection
+		// On left click, if there is no entity, clear selection
+		// TODO: check for entity under mouse that is not the cursor. Right now
+		// it works because of the ordering of system updates?
+		for _, system := range s.world.Systems() {
+			switch sys := system.(type) {
+			case *UnitSpawner:
+				for _, unit := range sys.AliveUnits {
+					sys.DeselectUnit(unit)
+				}
+			}
+		}
 
 	} else if s.cursor.mouse.Dragged {
 		// On drag, select all under the box area

@@ -84,6 +84,18 @@ func (us *UnitSpawner) moveUnit(unit *Unit, transx float32, transy float32) {
 	unit.shadow.SpaceComponent.Position.Y += transy
 }
 
+// SelectUnit select a unit and color shadow
+func (us *UnitSpawner) SelectUnit(unit *Unit) {
+	unit.selected = true
+	unit.shadow.RenderComponent.Color = color.RGBA{0, 255, 0, 255}
+}
+
+// DeselectUnit deselect a unit and make shadow black again
+func (us *UnitSpawner) DeselectUnit(unit *Unit) {
+	unit.selected = false
+	unit.shadow.RenderComponent.Color = color.RGBA{0, 0, 0, 255}
+}
+
 // SpawnUnitAtLocation spawn new unit at the given location
 func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
 	unit := us.newUnit(x, y)
@@ -106,7 +118,7 @@ func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
 func (us *UnitSpawner) Update(dt float32) {
 	for _, u := range us.AliveUnits {
 		if u.MouseComponent.Clicked {
-			us.moveUnit(u, 10, 0)
+			us.SelectUnit(u)
 		}
 	}
 }
