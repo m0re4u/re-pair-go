@@ -3,6 +3,7 @@ package systems
 import (
 	"fmt"
 	"image/color"
+	"math"
 
 	"github.com/EngoEngine/ecs"
 	"github.com/EngoEngine/engo"
@@ -24,7 +25,9 @@ type Unit struct {
 	common.AnimationComponent
 	position engo.Point
 	selected bool
+	speed    float32
 	shadow   Shadow
+	path     *PathPoint
 }
 
 // Shadow render unit shadow
@@ -38,6 +41,8 @@ type Shadow struct {
 type UnitSpawner struct {
 	world      *ecs.World
 	AliveUnits []*Unit // slice of pointers to all units
+	ast        AStar
+	p2p        AStarConfig
 }
 
 // Remove is called whenever an Entity is removed from the scene, and thus from this system
@@ -51,8 +56,15 @@ func (us *UnitSpawner) Add(u *Unit) {
 // New is the initialisation of the UnitSpawner System
 func (us *UnitSpawner) New(w *ecs.World) {
 	us.world = w
+
+	// Visuals
 	Spritesheet = common.NewSpritesheetFromFile("textures/art.png", 8, 8)
 	IdleAnimation = &common.Animation{Name: "idle", Frames: []int{7, 8}}
+
+	// Pathing
+	us.ast = NewAStar(300, 300)
+	us.p2p = NewPointToPoint()
+
 	fmt.Println("UnitSpawner was added to the Scene")
 
 }
@@ -83,14 +95,27 @@ func (us *UnitSpawner) newUnit(posx float32, posy float32) Unit {
 	unit.AnimationComponent = common.NewAnimationComponent(Spritesheet.Drawables(), 0.5)
 	unit.AnimationComponent.AddDefaultAnimation(IdleAnimation)
 
+	unit.speed = 2
+
 	return unit
 }
 
+// moveUnit move the unit a single step in the direction given by transx and transy
 func (us *UnitSpawner) moveUnit(unit *Unit, transx float32, transy float32) {
-	unit.SpaceComponent.Position.X += transx
-	unit.SpaceComponent.Position.Y += transy
-	unit.shadow.SpaceComponent.Position.X += transx
-	unit.shadow.SpaceComponent.Position.Y += transy
+	if transx > 0 {
+		unit.SpaceComponent.Position.X += unit.speed
+		unit.shadow.SpaceComponent.Position.X += unit.speed
+	} else if transx < 0 {
+		unit.SpaceComponent.Position.X -= unit.speed
+		unit.shadow.SpaceComponent.Position.X -= unit.speed
+	} else if transy > 0 {
+		unit.SpaceComponent.Position.Y += unit.speed
+		unit.shadow.SpaceComponent.Position.Y += unit.speed
+	} else if transy < 0 {
+		unit.SpaceComponent.Position.Y -= unit.speed
+		unit.shadow.SpaceComponent.Position.Y -= unit.speed
+	}
+	// Else, both translations are 0 and do a noop
 }
 
 // SelectUnit select a unit and color shadow
@@ -103,6 +128,16 @@ func (us *UnitSpawner) SelectUnit(unit *Unit) {
 func (us *UnitSpawner) DeselectUnit(unit *Unit) {
 	unit.selected = false
 	unit.shadow.RenderComponent.Color = color.RGBA{0, 0, 0, 255}
+}
+
+// MoveUnit move unit to target location
+func (us *UnitSpawner) MoveUnit(unit *Unit, target engo.Point) {
+	source := []Point{Convert(unit.SpaceComponent.Center())}
+	ttarget := []Point{Convert(target)}
+	fmt.Println("Finding path from", source, "to", ttarget)
+	end := us.ast.FindPath(us.p2p, source, ttarget)
+	unit.path = end
+
 }
 
 // SpawnUnitAtLocation spawn new unit at the given location
@@ -127,4 +162,16 @@ func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
 // Update is ran every frame, with `dt` being the time
 // in seconds since the last frame
 func (us *UnitSpawner) Update(dt float32) {
+	for _, unit := range us.AliveUnits {
+		if unit.path != nil && unit.path.Parent != nil {
+			nextTarget := ConvertBack(unit.path.Point)
+			fmt.Println("next step:", unit.path.Point, "target", nextTarget)
+			transx := float32(nextTarget.X) - unit.SpaceComponent.Center().X
+			transy := float32(nextTarget.Y) - unit.SpaceComponent.Center().Y
+			us.moveUnit(unit, transx, transy)
+			if math.Abs(float64(transx))+math.Abs(float64(transy)) < 4 {
+				unit.path = unit.path.Parent
+			}
+		}
+	}
 }

@@ -1,6 +1,7 @@
 package systems
 
 import (
+	"fmt"
 	"image/color"
 	"log"
 
@@ -118,6 +119,8 @@ func (s *MouseFollower) Update(dt float32) {
 	// Place cursor sprite at current mouse position
 	s.cursor.space.Position.X = engo.Input.Mouse.X
 	s.cursor.space.Position.Y = engo.Input.Mouse.Y
+
+	// Handle mouse clicks and drags
 	if s.cursor.mouse.Clicked {
 		// On left click, if there is no entity, clear selection
 		for _, system := range s.world.Systems() {
@@ -128,6 +131,18 @@ func (s *MouseFollower) Update(dt float32) {
 						sys.SelectUnit(unit)
 					} else {
 						sys.DeselectUnit(unit)
+					}
+				}
+			}
+		}
+	} else if s.cursor.mouse.RightClicked {
+		for _, system := range s.world.Systems() {
+			switch sys := system.(type) {
+			case *UnitSpawner:
+				for _, unit := range sys.AliveUnits {
+					if unit.selected {
+						sys.MoveUnit(unit, s.cursor.space.Position)
+						fmt.Println("Move unit", unit.BasicEntity.ID(), "to", s.cursor.space.Position)
 					}
 				}
 			}
