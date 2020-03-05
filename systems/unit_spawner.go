@@ -116,9 +116,4 @@ func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
 // Update is ran every frame, with `dt` being the time
 // in seconds since the last frame
 func (us *UnitSpawner) Update(dt float32) {
-	for _, u := range us.AliveUnits {
-		if u.MouseComponent.Clicked {
-			us.SelectUnit(u)
-		}
-	}
 }
