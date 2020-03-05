@@ -21,6 +21,8 @@ func (*DefaultScene) Type() string { return "Re-Pair" }
 func (*DefaultScene) Preload() {
 	engo.Files.Load("textures/unit.png")
 	engo.Files.Load("textures/cursor.png")
+	engo.Files.Load("textures/art.png")
+
 }
 
 // Setup is called before the main loop starts. It allows you to add entities
@@ -36,6 +38,7 @@ func (*DefaultScene) Setup(u engo.Updater) {
 
 	world.AddSystem(&common.RenderSystem{})
 	world.AddSystem(&common.MouseSystem{})
+	world.AddSystem(&common.AnimationSystem{})
 
 	// Custom cursor
 	world.AddSystem(&systems.MouseFollower{})

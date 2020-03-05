@@ -3,12 +3,17 @@ package systems
 import (
 	"fmt"
 	"image/color"
-	"log"
 
 	"github.com/EngoEngine/ecs"
 	"github.com/EngoEngine/engo"
 	"github.com/EngoEngine/engo/common"
 )
+
+// Spritesheet contains art for units
+var Spritesheet *common.Spritesheet
+
+// IdleAnimation for our unit
+var IdleAnimation *common.Animation
 
 // Unit unit defition
 type Unit struct {
@@ -16,6 +21,7 @@ type Unit struct {
 	common.RenderComponent
 	common.SpaceComponent
 	common.MouseComponent
+	common.AnimationComponent
 	position engo.Point
 	selected bool
 	shadow   Shadow
@@ -45,15 +51,15 @@ func (us *UnitSpawner) Add(u *Unit) {
 // New is the initialisation of the UnitSpawner System
 func (us *UnitSpawner) New(w *ecs.World) {
 	us.world = w
+	Spritesheet = common.NewSpritesheetFromFile("textures/art.png", 8, 8)
+	IdleAnimation = &common.Animation{Name: "idle", Frames: []int{7, 8}}
 	fmt.Println("UnitSpawner was added to the Scene")
+
 }
 
 // NewUnit create a new unit entity
 func (us *UnitSpawner) newUnit(posx float32, posy float32) Unit {
-	texture, err := common.LoadedSprite("textures/unit.png")
-	if err != nil {
-		log.Println("Unable to load texture: " + err.Error())
-	}
+	texture := Spritesheet.Cell(7)
 	unit := Unit{BasicEntity: ecs.NewBasic()}
 	unit.position = engo.Point{X: posx, Y: posy}
 	unit.RenderComponent = common.RenderComponent{
@@ -73,6 +79,9 @@ func (us *UnitSpawner) newUnit(posx float32, posy float32) Unit {
 		Height:   texture.Height() * unit.RenderComponent.Scale.Y,
 	}
 	unit.shadow.RenderComponent = common.RenderComponent{Drawable: common.Circle{}, Color: color.RGBA{0, 0, 0, 255}}
+
+	unit.AnimationComponent = common.NewAnimationComponent(Spritesheet.Drawables(), 0.5)
+	unit.AnimationComponent.AddDefaultAnimation(IdleAnimation)
 
 	return unit
 }
@@ -106,6 +115,8 @@ func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
 			sys.Add(&unit.shadow.BasicEntity, &unit.shadow.RenderComponent, &unit.shadow.SpaceComponent)
 		case *common.MouseSystem:
 			sys.Add(&unit.BasicEntity, &unit.MouseComponent, &unit.SpaceComponent, &unit.RenderComponent)
+		case *common.AnimationSystem:
+			sys.Add(&unit.BasicEntity, &unit.AnimationComponent, &unit.RenderComponent)
 		case *UnitSpawner:
 			sys.Add(&unit)
 		}
