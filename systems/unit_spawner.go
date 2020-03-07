@@ -13,11 +13,19 @@ import (
 // Spritesheet contains art for units
 var Spritesheet *common.Spritesheet
 
-// IdleAnimation for our unit
-var IdleAnimation *common.Animation
+// Unit interface which defines what a unit can do
+type Unit interface {
+	// exported
+	Deselect()
+	Select()
+	Move(AStar, AStarConfig, engo.Point)
+	Register(*UnitSpawner)
+	// internal
+	step(float32, float32)
+}
 
-// Unit unit defition
-type Unit struct {
+// BasicUnit Common unit fields
+type BasicUnit struct {
 	ecs.BasicEntity
 	common.RenderComponent
 	common.SpaceComponent
@@ -30,6 +38,16 @@ type Unit struct {
 	path     *PathPoint
 }
 
+// Fish First specific unit type
+type Fish struct {
+	*BasicUnit
+}
+
+// Blob Second unit type
+type Blob struct {
+	*BasicUnit
+}
+
 // Shadow render unit shadow
 type Shadow struct {
 	ecs.BasicEntity
@@ -40,7 +58,7 @@ type Shadow struct {
 // UnitSpawner takes care of unit spawning
 type UnitSpawner struct {
 	world      *ecs.World
-	AliveUnits []*Unit // slice of pointers to all units
+	AliveUnits []*BasicUnit // slice of pointers to all units
 	ast        AStar
 	p2p        AStarConfig
 }
@@ -49,7 +67,7 @@ type UnitSpawner struct {
 func (*UnitSpawner) Remove(ecs.BasicEntity) {}
 
 // Add a unit to the system
-func (us *UnitSpawner) Add(u *Unit) {
+func (us *UnitSpawner) Add(u *BasicUnit) {
 	us.AliveUnits = append(us.AliveUnits, u)
 }
 
@@ -59,21 +77,17 @@ func (us *UnitSpawner) New(w *ecs.World) {
 
 	// Visuals
 	Spritesheet = common.NewSpritesheetFromFile("textures/art.png", 8, 8)
-	IdleAnimation = &common.Animation{Name: "idle", Frames: []int{7, 8}}
 
 	// Pathing
-	us.ast = NewAStar(300, 300)
-	us.p2p = NewPointToPoint()
+	us.ast = NewAStar(300, 300) // algo
+	us.p2p = NewPointToPoint()  // config
 
 	fmt.Println("UnitSpawner was added to the Scene")
 
 }
 
-// NewUnit create a new unit entity
-func (us *UnitSpawner) newUnit(posx float32, posy float32) Unit {
-	texture := Spritesheet.Cell(7)
-	unit := Unit{BasicEntity: ecs.NewBasic()}
-	unit.position = engo.Point{X: posx, Y: posy}
+// setUnitParameters assign the (texture, animation, speed) parameters to the provided unit
+func (us *UnitSpawner) setUnitParameters(unit *BasicUnit, texture common.Drawable, anim *common.Animation, speed float32) {
 	unit.RenderComponent = common.RenderComponent{
 		Drawable: texture,
 		Scale:    engo.Point{X: 8, Y: 8},
@@ -93,15 +107,45 @@ func (us *UnitSpawner) newUnit(posx float32, posy float32) Unit {
 	unit.shadow.RenderComponent = common.RenderComponent{Drawable: common.Circle{}, Color: color.RGBA{0, 0, 0, 255}}
 
 	unit.AnimationComponent = common.NewAnimationComponent(Spritesheet.Drawables(), 0.5)
-	unit.AnimationComponent.AddDefaultAnimation(IdleAnimation)
-
-	unit.speed = 2
-
-	return unit
+	unit.AnimationComponent.AddDefaultAnimation(anim)
+	unit.speed = speed
 }
 
-// moveUnit move the unit a single step in the direction given by transx and transy
-func (us *UnitSpawner) moveUnit(unit *Unit, transx float32, transy float32) {
+// Create unit object based on unit type
+func (us *UnitSpawner) giveUnitParameters(unit *BasicUnit, unitID int) Unit {
+	var texture common.Drawable
+	var idle *common.Animation
+	var speed float32
+	if unitID == 0 {
+		texture = Spritesheet.Cell(7)
+		idle = &common.Animation{Name: "idle", Frames: []int{7, 8}}
+		speed = 4
+		us.setUnitParameters(unit, texture, idle, speed)
+		return &Fish{unit}
+
+	} else if unitID == 1 {
+		texture = Spritesheet.Cell(5)
+		idle = &common.Animation{Name: "idle", Frames: []int{5, 6}}
+		speed = 2
+		us.setUnitParameters(unit, texture, idle, speed)
+		return &Blob{unit}
+	} else {
+		return nil
+	}
+}
+
+// NewUnit create a new unit entity
+func (us *UnitSpawner) newUnit(posx float32, posy float32, unitID int) Unit {
+	// Create empty unit entity
+	unit := BasicUnit{BasicEntity: ecs.NewBasic()}
+	unit.position = engo.Point{X: posx, Y: posy}
+	// Assign the correct unit parameters according to requested ID
+	u := us.giveUnitParameters(&unit, unitID)
+	return u
+}
+
+// stepUnit move the unit a single step in the direction given by transx and transy
+func (unit *BasicUnit) step(transx float32, transy float32) {
 	if transx > 0 {
 		unit.SpaceComponent.Position.X += unit.speed
 		unit.shadow.SpaceComponent.Position.X += unit.speed
@@ -118,31 +162,28 @@ func (us *UnitSpawner) moveUnit(unit *Unit, transx float32, transy float32) {
 	// Else, both translations are 0 and do a noop
 }
 
-// SelectUnit select a unit and color shadow
-func (us *UnitSpawner) SelectUnit(unit *Unit) {
+// Select select a unit and color shadow
+func (unit *BasicUnit) Select() {
 	unit.selected = true
 	unit.shadow.RenderComponent.Color = color.RGBA{0, 255, 0, 255}
 }
 
-// DeselectUnit deselect a unit and make shadow black again
-func (us *UnitSpawner) DeselectUnit(unit *Unit) {
+// Deselect deselect a unit and make shadow black again
+func (unit *BasicUnit) Deselect() {
 	unit.selected = false
 	unit.shadow.RenderComponent.Color = color.RGBA{0, 0, 0, 255}
 }
 
-// MoveUnit move unit to target location
-func (us *UnitSpawner) MoveUnit(unit *Unit, target engo.Point) {
-	source := []Point{Convert(unit.SpaceComponent.Center())}
-	ttarget := []Point{Convert(target)}
-	fmt.Println("Finding path from", source, "to", ttarget)
-	end := us.ast.FindPath(us.p2p, source, ttarget)
+// Move move unit to target location
+func (unit *BasicUnit) Move(ast AStar, cfg AStarConfig, target engo.Point) {
+	source := []Point{EngoToPathing(unit.SpaceComponent.Center())}
+	ttarget := []Point{EngoToPathing(target)}
+	end := ast.FindPath(cfg, source, ttarget)
 	unit.path = end
-
 }
 
-// SpawnUnitAtLocation spawn new unit at the given location
-func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
-	unit := us.newUnit(x, y)
+// Register the unit to the spawner
+func (unit *BasicUnit) Register(us *UnitSpawner) {
 	for _, system := range us.world.Systems() {
 		switch sys := system.(type) {
 		case *common.RenderSystem:
@@ -153,10 +194,15 @@ func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
 		case *common.AnimationSystem:
 			sys.Add(&unit.BasicEntity, &unit.AnimationComponent, &unit.RenderComponent)
 		case *UnitSpawner:
-			sys.Add(&unit)
+			sys.Add(unit)
 		}
 	}
+}
 
+// SpawnUnitAtLocation spawn new unit at the given location
+func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32, unitID int) {
+	unit := us.newUnit(x, y, unitID)
+	unit.Register(us)
 }
 
 // Update is ran every frame, with `dt` being the time
@@ -164,11 +210,10 @@ func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32) {
 func (us *UnitSpawner) Update(dt float32) {
 	for _, unit := range us.AliveUnits {
 		if unit.path != nil && unit.path.Parent != nil {
-			nextTarget := ConvertBack(unit.path.Point)
-			fmt.Println("next step:", unit.path.Point, "target", nextTarget)
+			nextTarget := PathingToEngo(unit.path.Point)
 			transx := float32(nextTarget.X) - unit.SpaceComponent.Center().X
 			transy := float32(nextTarget.Y) - unit.SpaceComponent.Center().Y
-			us.moveUnit(unit, transx, transy)
+			unit.step(transx, transy)
 			if math.Abs(float64(transx))+math.Abs(float64(transy)) < 4 {
 				unit.path = unit.path.Parent
 			}

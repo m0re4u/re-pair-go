@@ -46,8 +46,10 @@ func (*DefaultScene) Setup(u engo.Updater) {
 	// Units
 	us := &systems.UnitSpawner{}
 	world.AddSystem(us)
-	us.SpawnUnitAtLocation(200, 200)
-	us.SpawnUnitAtLocation(300, 300)
+	us.SpawnUnitAtLocation(200, 200, 0)
+	us.SpawnUnitAtLocation(300, 300, 0)
+	us.SpawnUnitAtLocation(400, 400, 1)
+	us.SpawnUnitAtLocation(500, 500, 1)
 
 }
 

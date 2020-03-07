@@ -1,7 +1,6 @@
 package systems
 
 import (
-	"fmt"
 	"image/color"
 	"log"
 
@@ -103,9 +102,9 @@ func (s *MouseFollower) boxSelect(box *Box) {
 				// TODO add two other drag cases
 
 				if widthleft && widthright && heightupper && heightbottom {
-					sys.SelectUnit(unit)
+					unit.Select()
 				} else {
-					sys.DeselectUnit(unit)
+					unit.Deselect()
 
 				}
 			}
@@ -128,9 +127,9 @@ func (s *MouseFollower) Update(dt float32) {
 			case *UnitSpawner:
 				for _, unit := range sys.AliveUnits {
 					if unit.MouseComponent.Hovered {
-						sys.SelectUnit(unit)
+						unit.Select()
 					} else {
-						sys.DeselectUnit(unit)
+						unit.Deselect()
 					}
 				}
 			}
@@ -141,8 +140,7 @@ func (s *MouseFollower) Update(dt float32) {
 			case *UnitSpawner:
 				for _, unit := range sys.AliveUnits {
 					if unit.selected {
-						sys.MoveUnit(unit, s.cursor.space.Position)
-						fmt.Println("Move unit", unit.BasicEntity.ID(), "to", s.cursor.space.Position)
+						unit.Move(sys.ast, sys.p2p, s.cursor.space.Position)
 					}
 				}
 			}

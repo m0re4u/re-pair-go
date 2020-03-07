@@ -14,15 +14,15 @@ type Point struct {
 	X, Y int
 }
 
-// Convert engo point to pathing point (more discrete)
-func Convert(p engo.Point) Point {
+// EngoToPathing engo point to pathing point (more discrete)
+func EngoToPathing(p engo.Point) Point {
 	x := p.X
 	y := p.Y
 	return Point{X: int(x) / discreteStep, Y: int(y) / discreteStep}
 }
 
-// ConvertBack pathing point to engo point
-func ConvertBack(p Point) engo.Point {
+// PathingToEngo pathing point to engo point
+func PathingToEngo(p Point) engo.Point {
 	x := p.X
 	y := p.Y
 	return engo.Point{X: (float32(x) * discreteStep) + 4, Y: (float32(y) * discreteStep) + 4}
