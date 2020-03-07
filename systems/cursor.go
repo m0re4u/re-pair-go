@@ -79,29 +79,38 @@ func (s *MouseFollower) New(w *ecs.World) {
 // Remove follower system from the mouse
 func (*MouseFollower) Remove(basic ecs.BasicEntity) {}
 
+// inBox check if a Point is in a Box
+func (s *MouseFollower) inBox(box *Box, point engo.Point) bool {
+	var left, right, top, bottom float32
+	if box.SpaceComponent.Width >= 0 {
+		left = box.SpaceComponent.Position.X
+		right = box.SpaceComponent.Position.X + box.SpaceComponent.Width
+	} else {
+		left = box.SpaceComponent.Position.X + box.SpaceComponent.Width
+		right = box.SpaceComponent.Position.X
+	}
+
+	if box.SpaceComponent.Height >= 0 {
+		top = box.SpaceComponent.Position.Y
+		bottom = box.SpaceComponent.Position.Y + box.SpaceComponent.Height
+	} else {
+		top = box.SpaceComponent.Position.Y + box.SpaceComponent.Height
+		bottom = box.SpaceComponent.Position.Y
+	}
+	// drag to the right
+	if point.X >= left && point.X < right && point.Y > top && point.Y < bottom {
+		return true
+	}
+	return false
+}
+
 func (s *MouseFollower) boxSelect(box *Box) {
 	for _, system := range s.world.Systems() {
 		switch sys := system.(type) {
 		case *UnitSpawner:
 			for _, unit := range sys.AliveUnits {
 				// Check if unit center in box
-				var widthleft, widthright, heightupper, heightbottom bool
-				if box.SpaceComponent.Width > 0 {
-					// Dragging to bottom right
-					widthleft = unit.SpaceComponent.Center().X > box.SpaceComponent.Position.X
-					widthright = unit.SpaceComponent.Center().X < box.SpaceComponent.Position.X+box.SpaceComponent.Width
-					heightupper = unit.SpaceComponent.Center().Y > box.SpaceComponent.Position.Y
-					heightbottom = unit.SpaceComponent.Center().Y < box.SpaceComponent.Position.Y+box.SpaceComponent.Height
-				} else {
-					// Dragging to top left
-					widthleft = unit.SpaceComponent.Center().X < box.SpaceComponent.Position.X
-					widthright = unit.SpaceComponent.Center().X > box.SpaceComponent.Position.X+box.SpaceComponent.Width
-					heightupper = unit.SpaceComponent.Center().Y < box.SpaceComponent.Position.Y
-					heightbottom = unit.SpaceComponent.Center().Y > box.SpaceComponent.Position.Y+box.SpaceComponent.Height
-				}
-				// TODO add two other drag cases
-
-				if widthleft && widthright && heightupper && heightbottom {
+				if s.inBox(box, unit.SpaceComponent.Center()) {
 					unit.Select()
 				} else {
 					unit.Deselect()
