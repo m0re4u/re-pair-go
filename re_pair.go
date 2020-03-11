@@ -39,6 +39,7 @@ func (*DefaultScene) Setup(u engo.Updater) {
 	world.AddSystem(&common.RenderSystem{})
 	world.AddSystem(&common.MouseSystem{})
 	world.AddSystem(&common.AnimationSystem{})
+	world.AddSystem(&common.CollisionSystem{Solids: 1})
 
 	// Custom cursor
 	world.AddSystem(&systems.MouseFollower{})

@@ -31,6 +31,7 @@ type BasicUnit struct {
 	common.SpaceComponent
 	common.MouseComponent
 	common.AnimationComponent
+	common.CollisionComponent
 	position engo.Point
 	selected bool
 	speed    float32
@@ -109,6 +110,7 @@ func (us *UnitSpawner) setUnitParameters(unit *BasicUnit, texture common.Drawabl
 	unit.AnimationComponent = common.NewAnimationComponent(Spritesheet.Drawables(), 0.5)
 	unit.AnimationComponent.AddDefaultAnimation(anim)
 	unit.speed = speed
+	unit.CollisionComponent = common.CollisionComponent{Main: 1, Group: 1}
 }
 
 // Create unit object based on unit type
@@ -191,6 +193,8 @@ func (unit *BasicUnit) Register(us *UnitSpawner) {
 			sys.Add(&unit.shadow.BasicEntity, &unit.shadow.RenderComponent, &unit.shadow.SpaceComponent)
 		case *common.MouseSystem:
 			sys.Add(&unit.BasicEntity, &unit.MouseComponent, &unit.SpaceComponent, &unit.RenderComponent)
+		case *common.CollisionSystem:
+			sys.Add(&unit.BasicEntity, &unit.CollisionComponent, &unit.SpaceComponent)
 		case *common.AnimationSystem:
 			sys.Add(&unit.BasicEntity, &unit.AnimationComponent, &unit.RenderComponent)
 		case *UnitSpawner:
@@ -209,7 +213,9 @@ func (us *UnitSpawner) SpawnUnitAtLocation(x float32, y float32, unitID int) {
 // in seconds since the last frame
 func (us *UnitSpawner) Update(dt float32) {
 	for _, unit := range us.AliveUnits {
+		fmt.Println(unit.CollisionComponent)
 		if unit.path != nil && unit.path.Parent != nil {
+
 			nextTarget := PathingToEngo(unit.path.Point)
 			transx := float32(nextTarget.X) - unit.SpaceComponent.Center().X
 			transy := float32(nextTarget.Y) - unit.SpaceComponent.Center().Y
